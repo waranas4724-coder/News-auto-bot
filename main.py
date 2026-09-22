@@ -60,7 +60,8 @@ def bot_loop():
         print("----------------------------------------\n")
         time.sleep(300) # 5 minit interval
 
-if name == "main":
+# এই লাইনটি ঠিক করা হয়েছে (ডাবল আন্ডারস্কোর যুক্ত করা হয়েছে)
+if __name__ == "__main__":
     # Background-e bot cholbe
     t = threading.Thread(target=bot_loop)
     t.daemon = True
