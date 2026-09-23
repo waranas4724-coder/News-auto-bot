@@ -36,6 +36,9 @@ DB_FILE = os.environ.get(
 
 POST_INTERVAL = 900  # 15 minutes
 
+# Premium APK Telegram Channel
+APK_CHANNEL_URL = "https://t.me/sahatanas"
+
 
 # =========================================================
 # RSS FEEDS
@@ -243,10 +246,12 @@ db_lock = threading.Lock()
 # =========================================================
 
 def get_db():
+
     conn = sqlite3.connect(
         DB_FILE,
         timeout=30
     )
+
     return conn
 
 
@@ -280,7 +285,9 @@ def init_database():
 
         conn.commit()
 
-    print(f"✅ Database initialized: {DB_FILE}")
+    print(
+        f"✅ Database initialized: {DB_FILE}"
+    )
 
     load_latest_news()
 
@@ -316,13 +323,28 @@ def load_latest_news():
         for row in rows:
 
             news.append({
-                "id": str(row[0]),
-                "title": row[1] or "",
-                "description": row[2] or "",
-                "link": row[3] or "",
-                "image": row[4] or "",
-                "source": row[5] or "",
-                "created_at": row[6]
+
+                "id":
+                str(row[0]),
+
+                "title":
+                row[1] or "",
+
+                "description":
+                row[2] or "",
+
+                "link":
+                row[3] or "",
+
+                "image":
+                row[4] or "",
+
+                "source":
+                row[5] or "",
+
+                "created_at":
+                row[6]
+
             })
 
         latest_data["news"] = news
@@ -439,7 +461,9 @@ def is_duplicate(title, link):
 
     for row in rows:
 
-        old_title = normalize_text(row[0])
+        old_title = normalize_text(
+            row[0]
+        )
 
         if not old_title:
             continue
@@ -463,6 +487,7 @@ def is_duplicate(title, link):
 def save_posted_news(article):
 
     title = article["title"]
+
     link = article["link"]
 
     title_hash = make_hash(title)
@@ -497,9 +522,18 @@ def save_posted_news(article):
                         title_hash,
                         link,
                         title,
-                        article.get("description", ""),
-                        article.get("image", ""),
-                        article.get("source", ""),
+                        article.get(
+                            "description",
+                            ""
+                        ),
+                        article.get(
+                            "image",
+                            ""
+                        ),
+                        article.get(
+                            "source",
+                            ""
+                        ),
                         time.time()
                     )
                 )
@@ -560,11 +594,13 @@ def clean_html(text):
 def extract_image(item):
 
     namespaces = {
+
         "media":
         "http://search.yahoo.com/mrss/",
 
         "content":
         "http://purl.org/rss/1.0/modules/content/"
+
     }
 
     for tag in [
@@ -579,21 +615,29 @@ def extract_image(item):
 
         if elem is not None:
 
-            url = elem.attrib.get("url")
+            url = elem.attrib.get(
+                "url"
+            )
 
             if url:
                 return url
 
-    enclosure = item.find("enclosure")
+    enclosure = item.find(
+        "enclosure"
+    )
 
     if enclosure is not None:
 
-        url = enclosure.attrib.get("url")
+        url = enclosure.attrib.get(
+            "url"
+        )
 
         if url:
             return url
 
-    desc_elem = item.find("description")
+    desc_elem = item.find(
+        "description"
+    )
 
     content_elem = item.find(
         "content:encoded",
@@ -654,7 +698,9 @@ def find_first(element, names):
 
     for name in names:
 
-        child = element.find(name)
+        child = element.find(
+            name
+        )
 
         if child is not None:
             return child
@@ -669,12 +715,14 @@ def find_first(element, names):
 def parse_feed(feed_url, source_name):
 
     headers = {
+
         "User-Agent":
         "Mozilla/5.0 "
         "(Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 "
         "(KHTML, like Gecko) "
         "Chrome/120 Safari/537.36"
+
     }
 
     try:
@@ -741,7 +789,9 @@ def parse_feed(feed_url, source_name):
 
                 if link_element.text:
 
-                    link = link_element.text.strip()
+                    link = (
+                        link_element.text.strip()
+                    )
 
                 else:
 
@@ -754,7 +804,9 @@ def parse_feed(feed_url, source_name):
 
                 for child in item:
 
-                    if child.tag.endswith("link"):
+                    if child.tag.endswith(
+                        "link"
+                    ):
 
                         href = child.attrib.get(
                             "href"
@@ -765,9 +817,14 @@ def parse_feed(feed_url, source_name):
                             "alternate"
                         )
 
-                        if href and rel == "alternate":
+                        if (
+                            href
+                            and
+                            rel == "alternate"
+                        ):
 
                             link = href
+
                             break
 
             if not link:
@@ -794,7 +851,9 @@ def parse_feed(feed_url, source_name):
                     "..."
                 )
 
-            image = extract_image(item)
+            image = extract_image(
+                item
+            )
 
             article_id = make_article_id(
                 title,
@@ -803,19 +862,26 @@ def parse_feed(feed_url, source_name):
 
             articles.append({
 
-                "id": article_id,
+                "id":
+                article_id,
 
-                "title": title,
+                "title":
+                title,
 
-                "description": description,
+                "description":
+                description,
 
-                "link": link,
+                "link":
+                link,
 
-                "image": image,
+                "image":
+                image,
 
-                "source": source_name,
+                "source":
+                source_name,
 
-                "created_at": time.time()
+                "created_at":
+                time.time()
 
             })
 
@@ -861,7 +927,9 @@ def fetch_news_from_all_sources():
 
         ]
 
-        for future in as_completed(futures):
+        for future in as_completed(
+            futures
+        ):
 
             try:
 
@@ -874,6 +942,7 @@ def fetch_news_from_all_sources():
                     )
 
             except Exception:
+
                 continue
 
     unique_articles = []
@@ -884,23 +953,28 @@ def fetch_news_from_all_sources():
 
         for existing in unique_articles:
 
-            similarity = difflib.SequenceMatcher(
-                None,
-                normalize_text(
-                    article["title"]
-                ),
-                normalize_text(
-                    existing["title"]
-                )
-            ).ratio()
+            similarity = (
+                difflib.SequenceMatcher(
+                    None,
+                    normalize_text(
+                        article["title"]
+                    ),
+                    normalize_text(
+                        existing["title"]
+                    )
+                ).ratio()
+            )
 
             if (
                 article["link"]
-                == existing["link"]
-                or similarity >= 0.88
+                ==
+                existing["link"]
+                or
+                similarity >= 0.88
             ):
 
                 duplicate = True
+
                 break
 
         if not duplicate:
@@ -913,6 +987,917 @@ def fetch_news_from_all_sources():
 
 
 # =========================================================
+# PREMIUM TELEGRAM DESIGN COUNTER
+# =========================================================
+
+def get_post_design_index():
+
+    """
+    Rotate through 10 designs:
+
+    1 -> 2 -> 3 -> ... -> 10 -> 1 -> 2...
+
+    Uses current number of saved posts.
+    """
+
+    try:
+
+        with db_lock:
+
+            with get_db() as conn:
+
+                row = conn.execute(
+                    """
+                    SELECT COUNT(*)
+                    FROM posted_news
+                    """
+                ).fetchone()
+
+        total_posts = int(
+            row[0] or 0
+        )
+
+        return total_posts % 10
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Design counter error: {e}"
+        )
+
+        return 0
+
+
+# =========================================================
+# PREMIUM TELEGRAM POST BUILDER
+# =========================================================
+
+def build_premium_post(
+    article,
+    design_index
+):
+
+    title = html.escape(
+        article.get(
+            "title",
+            ""
+        )
+    )
+
+    description = html.escape(
+        article.get(
+            "description",
+            ""
+        )
+    )
+
+    source = html.escape(
+        article.get(
+            "source",
+            ""
+        )
+    )
+
+    article_id = article.get(
+        "id",
+        ""
+    )
+
+    # IMPORTANT:
+    # Telegram button opens YOUR website
+    # instead of directly opening RSS source.
+    portal_url = (
+        f"{WEBSITE_URL}/?id={article_id}"
+    )
+
+    # Keep Telegram post clean
+    if len(description) > 700:
+
+        description = (
+            description[:697] +
+            "..."
+        )
+
+    # =====================================================
+    # DESIGN 1
+    # =====================================================
+
+    if design_index == 0:
+
+        caption = (
+
+            "🌍 <b>WORLD NEWS • GLOBAL UPDATE</b>\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+
+            f"📰 <b>{title}</b>\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "\n"
+
+            f"{description}\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+
+            f"🌐 <b>Source:</b> {source}\n"
+            "\n"
+
+            "⚡ <b>Stay informed. Stay ahead.</b>\n"
+
+            "#WorldNews #GlobalNews #BreakingNews"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+                    {
+                        "text":
+                        "🔵  READ FULL NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+                ],
+
+                [
+                    {
+                        "text":
+                        "🟢  ANY PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+                ],
+
+                [
+                    {
+                        "text":
+                        "🌐  NEWS WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 2
+    # =====================================================
+
+    elif design_index == 1:
+
+        caption = (
+
+            "🚨 <b>BREAKING • WORLD DESK</b>\n"
+            "\n"
+
+            f"<b>🔥 {title}</b>\n"
+            "\n"
+
+            "📌 <b>Latest Update</b>\n"
+
+            f"{description}\n"
+            "\n"
+
+            "╔══════════════════╗\n"
+
+            f"🌎 <b>{source}</b>\n"
+
+            "╚══════════════════╝\n"
+            "\n"
+
+            "🔔 <b>Follow for more global updates.</b>"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "📰 READ FULL NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    },
+
+                    {
+                        "text":
+                        "📱 PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 OPEN NEWS PORTAL",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 3
+    # =====================================================
+
+    elif design_index == 2:
+
+        caption = (
+
+            "✦ <b>WORLD NEWS NETWORK</b> ✦\n"
+            "\n"
+
+            "╭──────────────────╮\n"
+
+            f"│  📰 <b>{title}</b>\n"
+
+            "╰──────────────────╯\n"
+            "\n"
+
+            f"📖 {description}\n"
+            "\n"
+
+            "┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n"
+
+            f"🌐 <b>Reported by:</b> {source}\n"
+
+            "┈┈┈┈┈┈┈┈┈┈┈┈┈┈\n"
+            "\n"
+
+            "🌍 <i>Your world. One channel.</i>\n"
+
+            "#News #World #Updates"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🔗 FULL STORY",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "📱 ANY PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    },
+
+                    {
+                        "text":
+                        "🌐 WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 4
+    # =====================================================
+
+    elif design_index == 3:
+
+        caption = (
+
+            "💠 <b>WORLD REPORT</b>\n"
+            "\n"
+
+            f"🔷 <b>{title}</b>\n"
+            "\n"
+
+            "📡 <b>NEWS BRIEF</b>\n"
+
+            f"{description}\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+
+            f"🌍 Source  ›  <b>{source}</b>\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "\n"
+
+            "⚡ <b>Fast • Fresh • Global</b>"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🔵 READ COMPLETE STORY",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🟢 GET PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 VISIT WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 5
+    # =====================================================
+
+    elif design_index == 4:
+
+        caption = (
+
+            "🌎 <b>GLOBAL NEWS • 24/7</b>\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+
+            f"📢 <b>{title}</b>\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+            "\n"
+
+            f"📝 {description}\n"
+            "\n"
+
+            "🔎 <b>DETAILS</b>\n"
+
+            f"Source: {source}\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━\n"
+
+            "🌍 <b>WORLD NEWS CHANNEL</b>\n"
+
+            "Stay connected with the world."
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "📖 READ STORY",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    },
+
+                    {
+                        "text":
+                        "📱 APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 WORLD NEWS WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 6
+    # =====================================================
+
+    elif design_index == 5:
+
+        caption = (
+
+            "🛰️ <b>WORLD NEWS • LIVE DESK</b>\n"
+            "\n"
+
+            f"⚡ <b>{title}</b>\n"
+            "\n"
+
+            f"{description}\n"
+            "\n"
+
+            "╭───────────────╮\n"
+
+            f"🌐 <b>{source}</b>\n"
+
+            "╰───────────────╯\n"
+            "\n"
+
+            "📲 <b>Tap below for the complete update.</b>\n"
+
+            "#GlobalUpdate #WorldNews"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🚀 OPEN FULL NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    },
+
+                    {
+                        "text":
+                        "📱 PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 NEWS PORTAL",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 7
+    # =====================================================
+
+    elif design_index == 6:
+
+        caption = (
+
+            "🔴 <b>WORLD ALERT</b>\n"
+            "\n"
+
+            "╔════════════════════╗\n"
+
+            f"📰 <b>{title}</b>\n"
+
+            "╚════════════════════╝\n"
+            "\n"
+
+            f"📄 {description}\n"
+            "\n"
+
+            f"🌐 <b>Source:</b> {source}\n"
+            "\n"
+
+            "⚠️ <i>Read the complete story below.</i>\n"
+            "\n"
+
+            "🌍 <b>WORLD NEWS</b>"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🔵 READ FULL NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🟢 PREMIUM APK CHANNEL",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 8
+    # =====================================================
+
+    elif design_index == 7:
+
+        caption = (
+
+            "✨ <b>THE WORLD IN FOCUS</b>\n"
+            "\n"
+
+            f"🎯 <b>{title}</b>\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+
+            f"{description}\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "\n"
+
+            f"📡 <b>Source:</b> {source}\n"
+            "\n"
+
+            "💡 <b>Read • Discover • Stay Updated</b>"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "📚 READ COMPLETE NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "💎 ANY PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    },
+
+                    {
+                        "text":
+                        "🌍 WEBSITE",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 9
+    # =====================================================
+
+    elif design_index == 8:
+
+        caption = (
+
+            "🌐 <b>GLOBAL NEWSROOM</b>\n"
+            "\n"
+
+            "🔹 <b>TOP STORY</b>\n"
+
+            f"📰 {title}\n"
+            "\n"
+
+            "🔹 <b>SUMMARY</b>\n"
+
+            f"{description}\n"
+            "\n"
+
+            "──────────────────\n"
+
+            f"🗞 <b>{source}</b>\n"
+
+            "──────────────────\n"
+            "\n"
+
+            "📲 <b>More details available below.</b>"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🔗 OPEN FULL STORY",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "📱 GET PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🏠 NEWS HOME",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    # =====================================================
+    # DESIGN 10
+    # =====================================================
+
+    else:
+
+        caption = (
+
+            "👑 <b>WORLD NEWS • PREMIUM EDITION</b>\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+
+            f"🔥 <b>{title}</b>\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+            "\n"
+
+            f"📌 {description}\n"
+            "\n"
+
+            f"🌎 <b>Source:</b> {source}\n"
+            "\n"
+
+            "━━━━━━━━━━━━━━━━━━━━\n"
+
+            "🚀 <b>Explore the complete story</b>\n"
+            "\n"
+
+            "🌍 <i>World News • Always Updated</i>\n"
+
+            "#WorldNews #NewsUpdate #Global"
+
+        )
+
+        buttons = {
+
+            "inline_keyboard": [
+
+                [
+
+                    {
+                        "text":
+                        "🚀 READ FULL NEWS",
+
+                        "url":
+                        portal_url,
+
+                        "style":
+                        "primary"
+                    },
+
+                    {
+                        "text":
+                        "💎 PREMIUM APK",
+
+                        "url":
+                        APK_CHANNEL_URL,
+
+                        "style":
+                        "success"
+                    }
+
+                ],
+
+                [
+
+                    {
+                        "text":
+                        "🌐 OPEN WORLD NEWS",
+
+                        "url":
+                        WEBSITE_URL,
+
+                        "style":
+                        "primary"
+                    }
+
+                ]
+
+            ]
+
+        }
+
+    return caption, buttons
+
+
+# =========================================================
 # TELEGRAM
 # =========================================================
 
@@ -920,57 +1905,44 @@ def send_news_to_telegram(article):
 
     if not TG_BOT_TOKEN:
 
-        print("❌ TG_BOT_TOKEN missing!")
+        print(
+            "❌ TG_BOT_TOKEN missing!"
+        )
 
         return False
 
     if not TG_CHAT_ID:
 
-        print("❌ TG_CHAT_ID missing!")
+        print(
+            "❌ TG_CHAT_ID missing!"
+        )
 
         return False
 
-    title = html.escape(
-        article["title"]
+    # -----------------------------------------------------
+    # GET ROTATING DESIGN
+    # -----------------------------------------------------
+
+    design_index = get_post_design_index()
+
+    design_number = (
+        design_index + 1
     )
 
-    description = html.escape(
-        article.get("description", "")
+    print(
+        f"🎨 Telegram Post Design: "
+        f"{design_number}/10"
     )
 
-    source = html.escape(
-        article["source"]
-    )
+    # -----------------------------------------------------
+    # BUILD PREMIUM POST
+    # -----------------------------------------------------
 
-    article_id = article["id"]
-
-    # IMPORTANT:
-    # Telegram Read Full News goes to YOUR Netlify
-    # NOT the original RSS source.
-    portal_url = (
-        f"{WEBSITE_URL}/?id={article_id}"
-    )
-
-    caption = (
-
-        "📰 <b>WORLD NEWS</b>\n"
-        "\n"
-
-        f"<b>{title}</b>\n"
-        "\n"
-
-        f"{description}\n"
-        "\n"
-
-        f"🌐 <b>Source:</b> {source}\n"
-        "\n"
-
-        "━━━━━━━━━━━━━━━━━━\n"
-
-        "🌍 <b>Stay Updated With World News</b>\n"
-
-        "#WorldNews #BreakingNews #News"
-
+    caption, reply_markup = (
+        build_premium_post(
+            article,
+            design_index
+        )
     )
 
     api_base = (
@@ -978,32 +1950,9 @@ def send_news_to_telegram(article):
         f"bot{TG_BOT_TOKEN}"
     )
 
-    reply_markup = {
-
-        "inline_keyboard": [
-
-            [
-                {
-                    "text":
-                    "🔗 Read Full News",
-
-                    "url":
-                    portal_url
-                }
-            ],
-
-            [
-                {
-                    "text":
-                    "🌐 Visit News Website",
-
-                    "url":
-                    WEBSITE_URL
-                }
-            ]
-
-        ]
-    }
+    # -----------------------------------------------------
+    # SEND PHOTO
+    # -----------------------------------------------------
 
     if article.get("image"):
 
@@ -1029,23 +1978,25 @@ def send_news_to_telegram(article):
 
                     "reply_markup":
                     reply_markup
+
                 },
 
                 timeout=25
+
             )
 
             if response.status_code == 200:
 
                 print(
-                    "✅ Telegram photo post sent: "
-                    f"{article['title']}"
+                    "✅ Premium Telegram "
+                    "photo post sent"
                 )
 
                 return True
 
             print(
                 "⚠️ Photo failed: "
-                f"{response.text[:300]}"
+                f"{response.text[:500]}"
             )
 
         except Exception as e:
@@ -1053,6 +2004,10 @@ def send_news_to_telegram(article):
             print(
                 f"⚠️ Telegram photo error: {e}"
             )
+
+    # -----------------------------------------------------
+    # FALLBACK TO TEXT
+    # -----------------------------------------------------
 
     try:
 
@@ -1076,23 +2031,25 @@ def send_news_to_telegram(article):
 
                 "reply_markup":
                 reply_markup
+
             },
 
             timeout=25
+
         )
 
         if response.status_code == 200:
 
             print(
-                "✅ Telegram text post sent: "
-                f"{article['title']}"
+                "✅ Premium Telegram "
+                "text post sent"
             )
 
             return True
 
         print(
             "❌ Telegram text failed: "
-            f"{response.text[:300]}"
+            f"{response.text[:500]}"
         )
 
     except Exception as e:
@@ -1178,9 +2135,14 @@ def fetch_currency():
 # WEBSITE DATA
 # =========================================================
 
-def update_website_data(article, database_id):
+def update_website_data(
+    article,
+    database_id
+):
 
-    article["database_id"] = database_id
+    article["database_id"] = (
+        database_id
+    )
 
     latest_data["news"].insert(
         0,
@@ -1199,23 +2161,32 @@ def update_website_data(article, database_id):
 def get_article_by_id(article_id):
 
     if not article_id:
+
         return None
 
-    # First check current memory
+    # -----------------------------------------------------
+    # CURRENT MEMORY
+    # -----------------------------------------------------
+
     for article in latest_data["news"]:
 
-        if str(article.get("id")) == str(article_id):
+        if str(
+            article.get("id")
+        ) == str(article_id):
 
             return article
 
-    # Then check SQLite
+    # -----------------------------------------------------
+    # SQLITE
+    # -----------------------------------------------------
+
     try:
 
         with db_lock:
 
             with get_db() as conn:
 
-                row = conn.execute(
+                rows = conn.execute(
                     """
                     SELECT
                         id,
@@ -1226,27 +2197,23 @@ def get_article_by_id(article_id):
                         source,
                         created_at
                     FROM posted_news
-                    WHERE
-                        substr(
-                            lower(hex(
-                                randomblob(1)
-                            )),
-                            1,
-                            0
-                        ) = ''
                     ORDER BY created_at DESC
                     LIMIT 30
                     """
                 ).fetchall()
 
-        for row in row:
+        for row in rows:
 
-            generated_id = make_article_id(
-                row[1] or "",
-                row[3] or ""
+            generated_id = (
+                make_article_id(
+                    row[1] or "",
+                    row[3] or ""
+                )
             )
 
-            if generated_id == str(article_id):
+            if generated_id == str(
+                article_id
+            ):
 
                 return {
 
@@ -1293,11 +2260,21 @@ def bot_loop():
     )
 
     print(
-        f"📡 RSS sources: {len(RSS_FEEDS)}"
+        f"📡 RSS sources: "
+        f"{len(RSS_FEEDS)}"
     )
 
     print(
         "⏱️ Posting interval: 15 minutes"
+    )
+
+    print(
+        "🎨 Premium designs: 10"
+    )
+
+    print(
+        "📱 Premium APK: "
+        f"{APK_CHANNEL_URL}"
     )
 
     while True:
@@ -1333,6 +2310,7 @@ def bot_loop():
                     continue
 
                 selected_article = article
+
                 break
 
             if selected_article:
@@ -1350,8 +2328,10 @@ def bot_loop():
 
                 if success:
 
-                    database_id = save_posted_news(
-                        selected_article
+                    database_id = (
+                        save_posted_news(
+                            selected_article
+                        )
                     )
 
                     update_website_data(
@@ -1373,7 +2353,8 @@ def bot_loop():
             else:
 
                 print(
-                    "ℹ️ No new unique news available."
+                    "ℹ️ No new unique "
+                    "news available."
                 )
 
         except Exception as e:
@@ -1383,7 +2364,8 @@ def bot_loop():
             )
 
         print(
-            "⏳ Next check in 15 minutes..."
+            "⏳ Next check in "
+            "15 minutes..."
         )
 
         time.sleep(
@@ -1410,8 +2392,13 @@ class SimpleHTTPRequestHandler(
             if self.path == "/health":
 
                 response_data = {
-                    "status": "ok",
-                    "service": "world-news-bot"
+
+                    "status":
+                    "ok",
+
+                    "service":
+                    "world-news-bot"
+
                 }
 
             # ---------------------------------------------
@@ -1431,30 +2418,49 @@ class SimpleHTTPRequestHandler(
                         1
                     )[1]
 
-                    for part in query.split("&"):
+                    for part in query.split(
+                        "&"
+                    ):
 
-                        if part.startswith("id="):
+                        if part.startswith(
+                            "id="
+                        ):
 
-                            article_id = part[3:]
+                            article_id = (
+                                part[3:]
+                            )
 
-                article = get_article_by_id(
-                    article_id
+                article = (
+                    get_article_by_id(
+                        article_id
+                    )
                 )
 
                 if article:
 
                     response_data = {
-                        "success": True,
-                        "article": article
+
+                        "success":
+                        True,
+
+                        "article":
+                        article
+
                     }
 
                 else:
 
                     response_data = {
-                        "success": False,
-                        "article": None,
+
+                        "success":
+                        False,
+
+                        "article":
+                        None,
+
                         "message":
                         "Article not found"
+
                     }
 
             # ---------------------------------------------
@@ -1467,18 +2473,26 @@ class SimpleHTTPRequestHandler(
                 self.path == "/api/news"
             ):
 
-                response_data = latest_data
+                response_data = (
+                    latest_data
+                )
 
             else:
 
-                response_data = latest_data
+                response_data = (
+                    latest_data
+                )
 
             body = json.dumps(
                 response_data,
                 ensure_ascii=False
-            ).encode("utf-8")
+            ).encode(
+                "utf-8"
+            )
 
-            self.send_response(200)
+            self.send_response(
+                200
+            )
 
             self.send_header(
                 "Content-Type",
@@ -1497,7 +2511,9 @@ class SimpleHTTPRequestHandler(
 
             self.end_headers()
 
-            self.wfile.write(body)
+            self.wfile.write(
+                body
+            )
 
         except Exception as e:
 
@@ -1505,7 +2521,9 @@ class SimpleHTTPRequestHandler(
                 f"❌ HTTP error: {e}"
             )
 
-            self.send_response(500)
+            self.send_response(
+                500
+            )
 
             self.send_header(
                 "Content-Type",
@@ -1515,9 +2533,16 @@ class SimpleHTTPRequestHandler(
             self.end_headers()
 
             self.wfile.write(
+
                 json.dumps({
-                    "error": "Internal server error"
-                }).encode("utf-8")
+
+                    "error":
+                    "Internal server error"
+
+                }).encode(
+                    "utf-8"
+                )
+
             )
 
     def log_message(
@@ -1544,7 +2569,8 @@ def run_web_server():
     )
 
     print(
-        f"🌐 API server running on port {PORT}"
+        f"🌐 API server running "
+        f"on port {PORT}"
     )
 
     server.serve_forever()
