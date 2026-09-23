@@ -6,9 +6,9 @@ import xml.etree.ElementTree as ET
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import os
 
-# Render-এর Environment variables থেকে টোকেন এবং চ্যাট আইডি কল করা হচ্ছে
 TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN")
 TG_CHAT_ID = os.environ.get("TG_CHAT_ID")
+WEBSITE_URL = "https://worldsnew.netlify.app"
 
 latest_data = {
     "news": [],
@@ -46,16 +46,29 @@ def fetch_latest_news():
         res = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         if res.status_code == 200:
             root = ET.fromstring(res.content)
-            item = root.find('.//item')
-            if item is not None:
-                title = item.find('title').text
-                link = item.find('link').text
+            items = root.findall('.//item')
+            
+            news_list = []
+            # শীর্ষ ৫টি খবর ও তার বিবরণ সংগ্রহ
+            for item in items[:5]:
+                title = item.find('title').text if item.find('title') is not None else ""
+                link = item.find('link').text if item.find('link') is not None else ""
+                desc = item.find('description').text if item.find('description') is not None else ""
                 
-                if not latest_data["news"] or latest_data["news"][0]["title"] != title:
-                    latest_data["news"] = [{"title": title, "link": link}]
-                    tg_message = f"📰 <b>{title}</b>\n\n🔗 {link}"
+                news_list.append({
+                    "title": title,
+                    "description": desc,
+                    "link": link
+                })
+
+            if news_list:
+                if not latest_data["news"] or latest_data["news"][0]["title"] != news_list[0]["title"]:
+                    latest_data["news"] = news_list
+                    top_news = news_list[0]
+                    
+                    tg_message = f"📰 <b>{top_news['title']}</b>\n\n{top_news['description']}\n\n👉 <b>Read Full News On Website:</b>\n🔗 {WEBSITE_URL}"
                     send_to_telegram(tg_message)
-                    print(f"✅ New Post Sent to Telegram: {title}")
+                    print(f"✅ New Post Sent to Telegram: {top_news['title']}")
     except Exception as e:
         print(f"News Error: {e}")
 
@@ -78,7 +91,7 @@ def fetch_currency():
         pass
 
 def bot_loop():
-    print("🚀 Secure Auto-Post Bot Started!")
+    print("🚀 Auto-Post Bot Running for worldsnew.netlify.app!")
     while True:
         fetch_latest_news()
         fetch_weather()
