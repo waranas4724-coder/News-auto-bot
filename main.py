@@ -25,7 +25,7 @@ TG_CHAT_ID = os.environ.get("TG_CHAT_ID")
 WEBSITE_URL = os.environ.get(
     "WEBSITE_URL",
     "https://worldsnew.netlify.app"
-)
+).rstrip("/")
 
 PORT = int(os.environ.get("PORT", "10000"))
 
@@ -40,18 +40,8 @@ POST_INTERVAL = 900  # 15 minutes
 # =========================================================
 # RSS FEEDS
 # =========================================================
-# 50+ feeds
-#
-# NOTE:
-# Reuters/AP old public RSS endpoints are intentionally
-# not included because their old public feeds are unreliable.
-# =========================================================
 
 RSS_FEEDS = [
-
-    # -----------------------------------------------------
-    # BBC
-    # -----------------------------------------------------
 
     ("BBC World",
      "https://feeds.bbci.co.uk/news/world/rss.xml"),
@@ -89,11 +79,6 @@ RSS_FEEDS = [
     ("BBC Sports",
      "https://feeds.bbci.co.uk/sport/rss.xml"),
 
-
-    # -----------------------------------------------------
-    # CNN
-    # -----------------------------------------------------
-
     ("CNN World",
      "http://rss.cnn.com/rss/edition_world.rss"),
 
@@ -106,11 +91,6 @@ RSS_FEEDS = [
     ("CNN Top Stories",
      "http://rss.cnn.com/rss/cnn_topstories.rss"),
 
-
-    # -----------------------------------------------------
-    # AL JAZEERA
-    # -----------------------------------------------------
-
     ("Al Jazeera",
      "https://www.aljazeera.com/xml/rss/all.xml"),
 
@@ -119,11 +99,6 @@ RSS_FEEDS = [
 
     ("Al Jazeera Asia",
      "https://www.aljazeera.com/xml/rss/asia.xml"),
-
-
-    # -----------------------------------------------------
-    # THE GUARDIAN
-    # -----------------------------------------------------
 
     ("Guardian World",
      "https://www.theguardian.com/world/rss"),
@@ -140,11 +115,6 @@ RSS_FEEDS = [
     ("Guardian Science",
      "https://www.theguardian.com/science/rss"),
 
-
-    # -----------------------------------------------------
-    # NEW YORK TIMES
-    # -----------------------------------------------------
-
     ("NY Times World",
      "https://rss.nytimes.com/services/xml/rss/nyt/World.xml"),
 
@@ -159,11 +129,6 @@ RSS_FEEDS = [
 
     ("NY Times US",
      "https://rss.nytimes.com/services/xml/rss/nyt/US.xml"),
-
-
-    # -----------------------------------------------------
-    # EUROPE / INTERNATIONAL
-    # -----------------------------------------------------
 
     ("DW News",
      "https://rss.dw.com/rdf/rss-en-all"),
@@ -183,21 +148,11 @@ RSS_FEEDS = [
     ("Sky News Technology",
      "https://feeds.skynews.com/feeds/rss/technology.xml"),
 
-
-    # -----------------------------------------------------
-    # ASIA / INTERNATIONAL
-    # -----------------------------------------------------
-
     ("NHK World",
      "https://www3.nhk.or.jp/rssxml/news/globalnewsroom.xml"),
 
     ("CBC World",
      "https://www.cbc.ca/webfeed/rss/rss-world"),
-
-
-    # -----------------------------------------------------
-    # NPR
-    # -----------------------------------------------------
 
     ("NPR News",
      "https://feeds.npr.org/1001/rss.xml"),
@@ -205,21 +160,11 @@ RSS_FEEDS = [
     ("NPR World",
      "https://feeds.npr.org/1004/rss.xml"),
 
-
-    # -----------------------------------------------------
-    # FOX
-    # -----------------------------------------------------
-
     ("Fox News World",
      "https://moxie.foxnews.com/google-publisher/world.xml"),
 
     ("Fox News Latest",
      "https://moxie.foxnews.com/google-publisher/latest.xml"),
-
-
-    # -----------------------------------------------------
-    # TECHNOLOGY
-    # -----------------------------------------------------
 
     ("TechCrunch",
      "https://techcrunch.com/feed/"),
@@ -248,32 +193,17 @@ RSS_FEEDS = [
     ("Hacker News",
      "https://news.ycombinator.com/rss"),
 
-
-    # -----------------------------------------------------
-    # BUSINESS / FINANCE
-    # -----------------------------------------------------
-
     ("CNBC",
      "https://www.cnbc.com/id/100003114/device/rss/rss.html"),
 
     ("CoinDesk",
      "https://www.coindesk.com/arc/outboundfeeds/rss/"),
 
-
-    # -----------------------------------------------------
-    # SPORTS
-    # -----------------------------------------------------
-
     ("ESPN",
      "https://www.espn.com/espn/rss/news"),
 
     ("Sky Sports",
      "https://www.skysports.com/rss/12040"),
-
-
-    # -----------------------------------------------------
-    # SCIENCE
-    # -----------------------------------------------------
 
     ("ScienceDaily",
      "https://www.sciencedaily.com/rss/all.xml"),
@@ -284,33 +214,14 @@ RSS_FEEDS = [
     ("Nature",
      "https://www.nature.com/nature.rss"),
 
-
-    # -----------------------------------------------------
-    # US / INTERNATIONAL
-    # -----------------------------------------------------
-
-    ("VOA News",
-     "https://www.voanews.com/api/ztqveq-$8t0z"),
-
-
-    # -----------------------------------------------------
-    # INDIA / SOUTH ASIA
-    # -----------------------------------------------------
-
     ("NDTV Latest",
      "https://feeds.feedburner.com/NDTV-LatestNews"),
 
     ("Times of India",
      "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"),
 
-
-    # -----------------------------------------------------
-    # EXTRA
-    # -----------------------------------------------------
-
     ("Economist",
      "https://www.economist.com/the-world-this-week/rss.xml"),
-
 ]
 
 
@@ -331,9 +242,17 @@ db_lock = threading.Lock()
 # DATABASE
 # =========================================================
 
+def get_db():
+    conn = sqlite3.connect(
+        DB_FILE,
+        timeout=30
+    )
+    return conn
+
+
 def init_database():
 
-    with sqlite3.connect(DB_FILE) as conn:
+    with get_db() as conn:
 
         conn.execute("""
             CREATE TABLE IF NOT EXISTS posted_news (
@@ -342,6 +261,8 @@ def init_database():
                 title_hash TEXT,
                 url TEXT,
                 title TEXT,
+                description TEXT,
+                image TEXT,
                 source TEXT,
                 created_at REAL
             )
@@ -360,6 +281,61 @@ def init_database():
         conn.commit()
 
     print(f"✅ Database initialized: {DB_FILE}")
+
+    load_latest_news()
+
+
+# =========================================================
+# LOAD SAVED NEWS AFTER RESTART
+# =========================================================
+
+def load_latest_news():
+
+    try:
+
+        with db_lock:
+
+            with get_db() as conn:
+
+                rows = conn.execute("""
+                    SELECT
+                        id,
+                        title,
+                        description,
+                        url,
+                        image,
+                        source,
+                        created_at
+                    FROM posted_news
+                    ORDER BY created_at DESC
+                    LIMIT 30
+                """).fetchall()
+
+        news = []
+
+        for row in rows:
+
+            news.append({
+                "id": str(row[0]),
+                "title": row[1] or "",
+                "description": row[2] or "",
+                "link": row[3] or "",
+                "image": row[4] or "",
+                "source": row[5] or "",
+                "created_at": row[6]
+            })
+
+        latest_data["news"] = news
+
+        print(
+            f"📚 Loaded {len(news)} saved news articles"
+        )
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Could not load saved news: {e}"
+        )
 
 
 # =========================================================
@@ -405,6 +381,13 @@ def make_hash(text):
     ).hexdigest()
 
 
+def make_article_id(title, link):
+
+    return hashlib.sha256(
+        f"{title}|{link}".encode("utf-8")
+    ).hexdigest()[:16]
+
+
 # =========================================================
 # DUPLICATE CHECK
 # =========================================================
@@ -415,13 +398,9 @@ def is_duplicate(title, link):
 
     title_hash = make_hash(title)
 
-    # -----------------------------------------------------
-    # URL exact duplicate
-    # -----------------------------------------------------
-
     with db_lock:
 
-        with sqlite3.connect(DB_FILE) as conn:
+        with get_db() as conn:
 
             row = conn.execute(
                 """
@@ -436,11 +415,6 @@ def is_duplicate(title, link):
             if row:
                 return True
 
-
-            # -------------------------------------------------
-            # Exact title duplicate
-            # -------------------------------------------------
-
             row = conn.execute(
                 """
                 SELECT id
@@ -454,11 +428,6 @@ def is_duplicate(title, link):
             if row:
                 return True
 
-
-            # -------------------------------------------------
-            # Similar title duplicate
-            # -------------------------------------------------
-
             rows = conn.execute(
                 """
                 SELECT title
@@ -467,7 +436,6 @@ def is_duplicate(title, link):
                 LIMIT 500
                 """
             ).fetchall()
-
 
     for row in rows:
 
@@ -482,19 +450,20 @@ def is_duplicate(title, link):
             old_title
         ).ratio()
 
-        # 88%+ similar = duplicate
         if similarity >= 0.88:
             return True
-
 
     return False
 
 
 # =========================================================
-# SAVE POSTED NEWS
+# SAVE NEWS
 # =========================================================
 
-def save_posted_news(title, link, source):
+def save_posted_news(article):
+
+    title = article["title"]
+    link = article["link"]
 
     title_hash = make_hash(title)
 
@@ -504,11 +473,11 @@ def save_posted_news(title, link, source):
 
     with db_lock:
 
-        with sqlite3.connect(DB_FILE) as conn:
+        with get_db() as conn:
 
             try:
 
-                conn.execute(
+                cursor = conn.execute(
                     """
                     INSERT INTO posted_news
                     (
@@ -516,25 +485,32 @@ def save_posted_news(title, link, source):
                         title_hash,
                         url,
                         title,
+                        description,
+                        image,
                         source,
                         created_at
                     )
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         combined_hash,
                         title_hash,
                         link,
                         title,
-                        source,
+                        article.get("description", ""),
+                        article.get("image", ""),
+                        article.get("source", ""),
                         time.time()
                     )
                 )
 
                 conn.commit()
 
+                return cursor.lastrowid
+
             except sqlite3.IntegrityError:
-                pass
+
+                return None
 
 
 # =========================================================
@@ -547,6 +523,20 @@ def clean_html(text):
         return ""
 
     text = html.unescape(text)
+
+    text = re.sub(
+        r"<script[\s\S]*?</script>",
+        " ",
+        text,
+        flags=re.IGNORECASE
+    )
+
+    text = re.sub(
+        r"<style[\s\S]*?</style>",
+        " ",
+        text,
+        flags=re.IGNORECASE
+    )
 
     text = re.sub(
         r"<[^>]+>",
@@ -570,13 +560,12 @@ def clean_html(text):
 def extract_image(item):
 
     namespaces = {
-        "media": "http://search.yahoo.com/mrss/",
-        "content": "http://purl.org/rss/1.0/modules/content/"
-    }
+        "media":
+        "http://search.yahoo.com/mrss/",
 
-    # -----------------------------------------------------
-    # media content / thumbnail
-    # -----------------------------------------------------
+        "content":
+        "http://purl.org/rss/1.0/modules/content/"
+    }
 
     for tag in [
         "media:content",
@@ -595,11 +584,6 @@ def extract_image(item):
             if url:
                 return url
 
-
-    # -----------------------------------------------------
-    # enclosure
-    # -----------------------------------------------------
-
     enclosure = item.find("enclosure")
 
     if enclosure is not None:
@@ -608,11 +592,6 @@ def extract_image(item):
 
         if url:
             return url
-
-
-    # -----------------------------------------------------
-    # content encoded
-    # -----------------------------------------------------
 
     desc_elem = item.find("description")
 
@@ -647,11 +626,6 @@ def extract_image(item):
 
     if matches:
         return matches[0]
-
-
-    # -----------------------------------------------------
-    # fallback image
-    # -----------------------------------------------------
 
     return (
         "https://images.unsplash.com/"
@@ -689,7 +663,7 @@ def find_first(element, names):
 
 
 # =========================================================
-# PARSE FEED
+# PARSE RSS
 # =========================================================
 
 def parse_feed(feed_url, source_name):
@@ -699,6 +673,7 @@ def parse_feed(feed_url, source_name):
         "Mozilla/5.0 "
         "(Windows NT 10.0; Win64; x64) "
         "AppleWebKit/537.36 "
+        "(KHTML, like Gecko) "
         "Chrome/120 Safari/537.36"
     }
 
@@ -707,7 +682,7 @@ def parse_feed(feed_url, source_name):
         response = requests.get(
             feed_url,
             headers=headers,
-            timeout=12
+            timeout=15
         )
 
         if response.status_code != 200:
@@ -719,22 +694,13 @@ def parse_feed(feed_url, source_name):
 
             return []
 
-
         root = ET.fromstring(
             response.content
         )
 
-
-        # -------------------------------------------------
-        # RSS
-        # -------------------------------------------------
-
-        items = root.findall(".//item")
-
-
-        # -------------------------------------------------
-        # Atom
-        # -------------------------------------------------
+        items = root.findall(
+            ".//item"
+        )
 
         if not items:
 
@@ -742,15 +708,9 @@ def parse_feed(feed_url, source_name):
                 ".//{http://www.w3.org/2005/Atom}entry"
             )
 
-
         articles = []
 
-
         for item in items[:10]:
-
-            # ---------------------------------------------
-            # RSS title
-            # ---------------------------------------------
 
             title_element = find_first(
                 item,
@@ -764,14 +724,8 @@ def parse_feed(feed_url, source_name):
                 title_element
             )
 
-
             if not title:
                 continue
-
-
-            # ---------------------------------------------
-            # RSS link
-            # ---------------------------------------------
 
             link_element = find_first(
                 item,
@@ -781,32 +735,20 @@ def parse_feed(feed_url, source_name):
                 ]
             )
 
-
             link = ""
-
 
             if link_element is not None:
 
                 if link_element.text:
 
-                    link = (
-                        link_element.text
-                        .strip()
-                    )
+                    link = link_element.text.strip()
 
                 else:
 
-                    link = (
-                        link_element.attrib.get(
-                            "href",
-                            ""
-                        )
+                    link = link_element.attrib.get(
+                        "href",
+                        ""
                     )
-
-
-            # ---------------------------------------------
-            # Atom alternate link
-            # ---------------------------------------------
 
             if not link:
 
@@ -828,14 +770,8 @@ def parse_feed(feed_url, source_name):
                             link = href
                             break
 
-
             if not link:
                 continue
-
-
-            # ---------------------------------------------
-            # Description
-            # ---------------------------------------------
 
             description_element = find_first(
                 item,
@@ -847,28 +783,27 @@ def parse_feed(feed_url, source_name):
                 ]
             )
 
-
             description = get_element_text(
                 description_element
             )
 
-
-            if len(description) > 350:
+            if len(description) > 1000:
 
                 description = (
-                    description[:347] +
+                    description[:997] +
                     "..."
                 )
 
-
-            # ---------------------------------------------
-            # Image
-            # ---------------------------------------------
-
             image = extract_image(item)
 
+            article_id = make_article_id(
+                title,
+                link
+            )
 
             articles.append({
+
+                "id": article_id,
 
                 "title": title,
 
@@ -878,10 +813,11 @@ def parse_feed(feed_url, source_name):
 
                 "image": image,
 
-                "source": source_name
+                "source": source_name,
+
+                "created_at": time.time()
 
             })
-
 
         print(
             f"✅ {source_name}: "
@@ -890,12 +826,11 @@ def parse_feed(feed_url, source_name):
 
         return articles
 
-
     except Exception as e:
 
         print(
             f"❌ {source_name}: "
-            f"{str(e)[:120]}"
+            f"{str(e)[:150]}"
         )
 
         return []
@@ -908,7 +843,6 @@ def parse_feed(feed_url, source_name):
 def fetch_news_from_all_sources():
 
     all_articles = []
-
 
     with ThreadPoolExecutor(
         max_workers=12
@@ -927,7 +861,6 @@ def fetch_news_from_all_sources():
 
         ]
 
-
         for future in as_completed(futures):
 
             try:
@@ -943,18 +876,11 @@ def fetch_news_from_all_sources():
             except Exception:
                 continue
 
-
-    # -----------------------------------------------------
-    # Remove duplicates inside current batch
-    # -----------------------------------------------------
-
     unique_articles = []
-
 
     for article in all_articles:
 
         duplicate = False
-
 
         for existing in unique_articles:
 
@@ -968,7 +894,6 @@ def fetch_news_from_all_sources():
                 )
             ).ratio()
 
-
             if (
                 article["link"]
                 == existing["link"]
@@ -978,59 +903,53 @@ def fetch_news_from_all_sources():
                 duplicate = True
                 break
 
-
         if not duplicate:
 
             unique_articles.append(
                 article
             )
 
-
     return unique_articles
 
 
 # =========================================================
-# TELEGRAM MESSAGE
+# TELEGRAM
 # =========================================================
 
 def send_news_to_telegram(article):
 
     if not TG_BOT_TOKEN:
 
-        print(
-            "❌ TG_BOT_TOKEN missing!"
-        )
+        print("❌ TG_BOT_TOKEN missing!")
 
         return False
-
 
     if not TG_CHAT_ID:
 
-        print(
-            "❌ TG_CHAT_ID missing!"
-        )
+        print("❌ TG_CHAT_ID missing!")
 
         return False
-
 
     title = html.escape(
         article["title"]
     )
 
     description = html.escape(
-        article["description"]
+        article.get("description", "")
     )
 
     source = html.escape(
         article["source"]
     )
 
-    link = article["link"]
+    article_id = article["id"]
 
-
-    # -----------------------------------------------------
-    # Professional Telegram caption
-    # -----------------------------------------------------
+    # IMPORTANT:
+    # Telegram Read Full News goes to YOUR Netlify
+    # NOT the original RSS source.
+    portal_url = (
+        f"{WEBSITE_URL}/?id={article_id}"
+    )
 
     caption = (
 
@@ -1054,16 +973,10 @@ def send_news_to_telegram(article):
 
     )
 
-
     api_base = (
         f"https://api.telegram.org/"
         f"bot{TG_BOT_TOKEN}"
     )
-
-
-    # -----------------------------------------------------
-    # Inline button
-    # -----------------------------------------------------
 
     reply_markup = {
 
@@ -1073,7 +986,9 @@ def send_news_to_telegram(article):
                 {
                     "text":
                     "🔗 Read Full News",
-                    "url": link
+
+                    "url":
+                    portal_url
                 }
             ],
 
@@ -1081,19 +996,14 @@ def send_news_to_telegram(article):
                 {
                     "text":
                     "🌐 Visit News Website",
+
                     "url":
                     WEBSITE_URL
                 }
             ]
 
         ]
-
     }
-
-
-    # -----------------------------------------------------
-    # Try photo post
-    # -----------------------------------------------------
 
     if article.get("image"):
 
@@ -1119,42 +1029,30 @@ def send_news_to_telegram(article):
 
                     "reply_markup":
                     reply_markup
-
                 },
 
-                timeout=20
-
+                timeout=25
             )
-
 
             if response.status_code == 200:
 
                 print(
-                    "✅ Telegram photo post sent:"
-                    f" {article['title']}"
+                    "✅ Telegram photo post sent: "
+                    f"{article['title']}"
                 )
 
                 return True
 
-
-            else:
-
-                print(
-                    "⚠️ Photo failed: "
-                    f"{response.text[:300]}"
-                )
-
+            print(
+                "⚠️ Photo failed: "
+                f"{response.text[:300]}"
+            )
 
         except Exception as e:
 
             print(
                 f"⚠️ Telegram photo error: {e}"
             )
-
-
-    # -----------------------------------------------------
-    # Text fallback
-    # -----------------------------------------------------
 
     try:
 
@@ -1178,36 +1076,30 @@ def send_news_to_telegram(article):
 
                 "reply_markup":
                 reply_markup
-
             },
 
-            timeout=20
-
+            timeout=25
         )
-
 
         if response.status_code == 200:
 
             print(
-                "✅ Telegram text post sent:"
-                f" {article['title']}"
+                "✅ Telegram text post sent: "
+                f"{article['title']}"
             )
 
             return True
 
-
         print(
-            "❌ Telegram text failed:"
-            f" {response.text[:300]}"
+            "❌ Telegram text failed: "
+            f"{response.text[:300]}"
         )
-
 
     except Exception as e:
 
         print(
             f"❌ Telegram text error: {e}"
         )
-
 
     return False
 
@@ -1227,30 +1119,27 @@ def fetch_weather():
             "&current_weather=true"
         )
 
-
         response = requests.get(
             url,
             timeout=8
         )
 
-
         data = response.json()
-
 
         temp = (
             data["current_weather"]
             ["temperature"]
         )
 
-
         latest_data["weather"] = (
             f"{temp}°C"
         )
 
+    except Exception as e:
 
-    except Exception:
-
-        pass
+        print(
+            f"⚠️ Weather error: {e}"
+        )
 
 
 # =========================================================
@@ -1265,47 +1154,132 @@ def fetch_currency():
             "https://open.er-api.com/v6/latest/USD"
         )
 
-
         response = requests.get(
             url,
             timeout=8
         )
 
-
         data = response.json()
 
-
-        rate = (
-            data["rates"]["BDT"]
-        )
-
+        rate = data["rates"]["BDT"]
 
         latest_data["currency"] = (
             f"{round(rate, 2)} BDT"
         )
 
+    except Exception as e:
 
-    except Exception:
-
-        pass
+        print(
+            f"⚠️ Currency error: {e}"
+        )
 
 
 # =========================================================
-# UPDATE WEBSITE DATA
+# WEBSITE DATA
 # =========================================================
 
-def update_website_data(article):
+def update_website_data(article, database_id):
+
+    article["database_id"] = database_id
 
     latest_data["news"].insert(
         0,
         article
     )
 
-
-    # Maximum 30 articles
     latest_data["news"] = (
         latest_data["news"][:30]
     )
+
+
+# =========================================================
+# FIND ARTICLE BY ID
+# =========================================================
+
+def get_article_by_id(article_id):
+
+    if not article_id:
+        return None
+
+    # First check current memory
+    for article in latest_data["news"]:
+
+        if str(article.get("id")) == str(article_id):
+
+            return article
+
+    # Then check SQLite
+    try:
+
+        with db_lock:
+
+            with get_db() as conn:
+
+                row = conn.execute(
+                    """
+                    SELECT
+                        id,
+                        title,
+                        description,
+                        url,
+                        image,
+                        source,
+                        created_at
+                    FROM posted_news
+                    WHERE
+                        substr(
+                            lower(hex(
+                                randomblob(1)
+                            )),
+                            1,
+                            0
+                        ) = ''
+                    ORDER BY created_at DESC
+                    LIMIT 30
+                    """
+                ).fetchall()
+
+        for row in row:
+
+            generated_id = make_article_id(
+                row[1] or "",
+                row[3] or ""
+            )
+
+            if generated_id == str(article_id):
+
+                return {
+
+                    "id":
+                    generated_id,
+
+                    "title":
+                    row[1] or "",
+
+                    "description":
+                    row[2] or "",
+
+                    "link":
+                    row[3] or "",
+
+                    "image":
+                    row[4] or "",
+
+                    "source":
+                    row[5] or "",
+
+                    "created_at":
+                    row[6]
+
+                }
+
+    except Exception as e:
+
+        print(
+            f"⚠️ Article lookup error: {e}"
+        )
+
+    return None
 
 
 # =========================================================
@@ -1319,55 +1293,35 @@ def bot_loop():
     )
 
     print(
-        f"📡 RSS sources: "
-        f"{len(RSS_FEEDS)}"
+        f"📡 RSS sources: {len(RSS_FEEDS)}"
     )
 
     print(
-        "⏱️ Posting interval: "
-        "15 minutes"
+        "⏱️ Posting interval: 15 minutes"
     )
-
 
     while True:
 
         try:
 
-            # ---------------------------------------------
-            # Weather + Currency
-            # ---------------------------------------------
-
             fetch_weather()
 
             fetch_currency()
-
-
-            # ---------------------------------------------
-            # Fetch news
-            # ---------------------------------------------
 
             print(
                 "\n🔎 Checking RSS feeds..."
             )
 
-
             articles = (
                 fetch_news_from_all_sources()
             )
-
 
             print(
                 f"📥 Unique articles found: "
                 f"{len(articles)}"
             )
 
-
-            # ---------------------------------------------
-            # Find first non-duplicate
-            # ---------------------------------------------
-
             selected_article = None
-
 
             for article in articles:
 
@@ -1378,23 +1332,15 @@ def bot_loop():
 
                     continue
 
-
                 selected_article = article
-
                 break
-
-
-            # ---------------------------------------------
-            # Publish
-            # ---------------------------------------------
 
             if selected_article:
 
                 print(
-                    "📰 Selected:"
-                    f" {selected_article['title']}"
+                    "📰 Selected: "
+                    f"{selected_article['title']}"
                 )
-
 
                 success = (
                     send_news_to_telegram(
@@ -1402,47 +1348,33 @@ def bot_loop():
                     )
                 )
 
-
                 if success:
 
-                    # Save ONLY after successful Telegram post
-                    save_posted_news(
-
-                        selected_article["title"],
-
-                        selected_article["link"],
-
-                        selected_article["source"]
-
-                    )
-
-
-                    # Website update
-                    update_website_data(
+                    database_id = save_posted_news(
                         selected_article
                     )
 
+                    update_website_data(
+                        selected_article,
+                        database_id
+                    )
 
                     print(
                         "✅ Published successfully!"
                     )
 
-
                 else:
 
                     print(
-                        "❌ Telegram post failed. "
-                        "News was NOT saved as posted."
+                        "❌ Telegram failed. "
+                        "News NOT saved."
                     )
-
 
             else:
 
                 print(
-                    "ℹ️ No new unique news "
-                    "available right now."
+                    "ℹ️ No new unique news available."
                 )
-
 
         except Exception as e:
 
@@ -1450,15 +1382,9 @@ def bot_loop():
                 f"❌ Main loop error: {e}"
             )
 
-
-        # ---------------------------------------------
-        # 15 minutes
-        # ---------------------------------------------
-
         print(
             "⏳ Next check in 15 minutes..."
         )
-
 
         time.sleep(
             POST_INTERVAL
@@ -1466,61 +1392,133 @@ def bot_loop():
 
 
 # =========================================================
-# WEBSITE API SERVER
+# HTTP API
 # =========================================================
 
 class SimpleHTTPRequestHandler(
     BaseHTTPRequestHandler
 ):
 
-
     def do_GET(self):
 
-        if self.path == "/":
+        try:
 
-            response_data = latest_data
+            # ---------------------------------------------
+            # HEALTH
+            # ---------------------------------------------
 
+            if self.path == "/health":
 
-        elif self.path == "/api/news":
+                response_data = {
+                    "status": "ok",
+                    "service": "world-news-bot"
+                }
 
-            response_data = latest_data
+            # ---------------------------------------------
+            # SINGLE ARTICLE
+            # ---------------------------------------------
 
+            elif self.path.startswith(
+                "/api/article"
+            ):
 
-        else:
+                article_id = None
 
-            response_data = latest_data
+                if "?" in self.path:
 
+                    query = self.path.split(
+                        "?",
+                        1
+                    )[1]
 
-        body = json.dumps(
-            response_data,
-            ensure_ascii=False
-        ).encode("utf-8")
+                    for part in query.split("&"):
 
+                        if part.startswith("id="):
 
-        self.send_response(200)
+                            article_id = part[3:]
 
-        self.send_header(
-            "Content-Type",
-            "application/json; charset=utf-8"
-        )
+                article = get_article_by_id(
+                    article_id
+                )
 
-        self.send_header(
-            "Access-Control-Allow-Origin",
-            "*"
-        )
+                if article:
 
-        self.send_header(
-            "Cache-Control",
-            "no-cache, no-store, must-revalidate"
-        )
+                    response_data = {
+                        "success": True,
+                        "article": article
+                    }
 
-        self.end_headers()
+                else:
 
+                    response_data = {
+                        "success": False,
+                        "article": None,
+                        "message":
+                        "Article not found"
+                    }
 
-        self.wfile.write(
-            body
-        )
+            # ---------------------------------------------
+            # ALL NEWS
+            # ---------------------------------------------
 
+            elif (
+                self.path == "/"
+                or
+                self.path == "/api/news"
+            ):
+
+                response_data = latest_data
+
+            else:
+
+                response_data = latest_data
+
+            body = json.dumps(
+                response_data,
+                ensure_ascii=False
+            ).encode("utf-8")
+
+            self.send_response(200)
+
+            self.send_header(
+                "Content-Type",
+                "application/json; charset=utf-8"
+            )
+
+            self.send_header(
+                "Access-Control-Allow-Origin",
+                "*"
+            )
+
+            self.send_header(
+                "Cache-Control",
+                "no-cache, no-store, must-revalidate"
+            )
+
+            self.end_headers()
+
+            self.wfile.write(body)
+
+        except Exception as e:
+
+            print(
+                f"❌ HTTP error: {e}"
+            )
+
+            self.send_response(500)
+
+            self.send_header(
+                "Content-Type",
+                "application/json"
+            )
+
+            self.end_headers()
+
+            self.wfile.write(
+                json.dumps({
+                    "error": "Internal server error"
+                }).encode("utf-8")
+            )
 
     def log_message(
         self,
@@ -1528,7 +1526,6 @@ class SimpleHTTPRequestHandler(
         *args
     ):
 
-        # Reduce Render log noise
         return
 
 
@@ -1546,12 +1543,9 @@ def run_web_server():
         SimpleHTTPRequestHandler
     )
 
-
     print(
-        f"🌐 API server running on port "
-        f"{PORT}"
+        f"🌐 API server running on port {PORT}"
     )
-
 
     server.serve_forever()
 
@@ -1564,8 +1558,6 @@ if __name__ == "__main__":
 
     init_database()
 
-
-    # Start news bot
     news_thread = threading.Thread(
         target=bot_loop,
         daemon=True
@@ -1573,6 +1565,4 @@ if __name__ == "__main__":
 
     news_thread.start()
 
-
-    # Start website API
     run_web_server()
